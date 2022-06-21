@@ -20,9 +20,9 @@ public class MyRouteBuilder extends RouteBuilder {
 
 		rest(apiPath)
 				.post("/submit")
-				.to("direct:insert");
+				.to("direct:submit");
 		rest(apiPath)
-				.get("/{id}")                                                                                           //.get("/{name}")
+				.get("/{id}")
 				.to("direct:view")
 				.get("/")
 				.to("direct:view");
@@ -33,33 +33,39 @@ public class MyRouteBuilder extends RouteBuilder {
 				.delete("/{id}")
 				.to("direct:delete");
 
-		/*from("direct:insert")
-				.setBody(simple("insert into customer values(100,'Name')"))
-				.to("jdbc:myDataSource")
-				.log("transformed message body ${body}");*/
+		from("direct:submit")
+				.log("input message received body ->${body}")
+				.unmarshal().json()
+				.choice()
+					.when(simple("${body[id]}!= null"))
+						.log("received body id->${body[id]}")
+						.toD("sql:insert into customer values(${body[id]},'${body[name]}')")
+					.otherwise()
+						.log("Exception occured");
 
 		from("direct:view")
-				.log("input message received body-> ${body}")
 				.choice()
 					.when(simple("${headers.id} != null "))
-						.setBody(simple("select name from customer where id =${headers.id}"))
-						.to("jdbc:myDataSource")
+						.toD("sql:select name from customer where id =${headers.id}")
 						.marshal().json()
 						.to("log:?level=INFO&showBody=true")
 					.otherwise()
-						.setBody(simple("select name from customer"))
-						.to("jdbc:myDataSource")
+						.to("sql:select name from customer")
 						.marshal().json()
 						.to("log:?level=INFO&showBody=true");
 
-		/*from("direct:update")
-				.setBody(constant("Update customer set name = 'manu' where id='100'"))
-				.to("jdbc:myDataSource")
-				.log("transformed message body ${body}");
+		from("direct:update")
+				.choice()
+					.when(simple("${headers.id} != null "))
+						.unmarshal().json()
+						.log("received message id ${body[id]}")
+						.toD("sql:Update customer set name = '${body[name]}' where id=${body[id]}")
+						.marshal().json()
+						.to("log:?level=INFO&showBody=true")
+					.otherwise()
+						.log("Exception occured");
 
 		from("direct:delete")
-				.setBody(constant("delete from customer where id = ${id}"))
-				.to("jdbc:myDataSource")
-				.log("transformed message body ${body}");*/
+				.toD("sql:delete from customer where id = ${headers.id}");
 	}
 }
