@@ -1,20 +1,29 @@
 package com.study.projects;
 
 import org.apache.camel.main.Main;
+import org.apache.commons.dbcp2.BasicDataSource;
+import javax.sql.DataSource;
 
-/**
- * A Camel Application
- */
 public class MainApp {
 
-    /**
-     * A main() so we can easily run these routing rules in our IDE
-     */
     public static void main(String... args) throws Exception {
+
         Main main = new Main();
+        String url = "jdbc:mysql://localhost:3306/study";
+        DataSource dataSource = setupDataSource(url);
+
+        main.bind("myDataSource",dataSource);;
         main.configure().addRoutesBuilder(new MyRouteBuilder());
         main.run(args);
     }
 
+    private static DataSource setupDataSource(String connectURI) {
+        BasicDataSource ds = new BasicDataSource();
+        ds.setDriverClassName("com.mysql.jdbc.Driver");
+        ds.setUsername("root");
+        ds.setPassword("root");
+        ds.setUrl(connectURI);
+        return ds;
+    }
 }
 
