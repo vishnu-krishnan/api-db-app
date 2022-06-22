@@ -1,17 +1,18 @@
 package com.study.projects;
 
+
 import org.apache.camel.PropertyInject;
 import org.apache.camel.builder.RouteBuilder;
 
 public class MyRouteBuilder extends RouteBuilder {
 
-	@PropertyInject("{{api.path}}")
+	@PropertyInject("{{so.api.path}}")
 	private String apiPath;
 
-	@PropertyInject("{{api.host}}")
+	@PropertyInject("{{so.api.host}}")
 	private String host;
 
-	@PropertyInject("{{api.port}}")
+	@PropertyInject("{{so.api.port}}")
 	private String port;
 
 	public void configure() {
@@ -36,21 +37,26 @@ public class MyRouteBuilder extends RouteBuilder {
 		from("direct:submit")
 				.log("input message received body ->${body}")
 				.unmarshal().json()
+				.log("received body id->${body[id]}")
+				.bean(new CustomerMapper(),"putCustomerDetails")
+				.toD("sql:{{insertCustomer}}")
 				.choice()
-					.when(simple("${body[id]}!= null"))
-						.log("received body id->${body[id]}")
-						.toD("sql:insert into customer values(${body[id]},'${body[name]}')")
+					.when(simple("${body[customerId]}!= null"))
+						.setBody(simple("Status:SUCCESS"))
 					.otherwise()
-						.log("Exception occured");
+						.setBody(simple("Status:FAILURE"));
 
 		from("direct:view")
 				.choice()
 					.when(simple("${headers.id} != null "))
-						.toD("sql:select name from customer where id =${headers.id}")
+						.log("input header id-> ${headers.id}")
+						.toD("sql:{{selectCustomerName}}")
+						.bean(new CustomerMapper(),"getCustomerDetails")
 						.marshal().json()
 						.to("log:?level=INFO&showBody=true")
 					.otherwise()
-						.to("sql:select name from customer")
+						.toD("sql:{{selectAllCustomer}}")
+						.bean(new CustomerMapper(),"getCustomerDetails")
 						.marshal().json()
 						.to("log:?level=INFO&showBody=true");
 
@@ -59,13 +65,13 @@ public class MyRouteBuilder extends RouteBuilder {
 					.when(simple("${headers.id} != null "))
 						.unmarshal().json()
 						.log("received message id ${body[id]}")
-						.toD("sql:Update customer set name = '${body[name]}' where id=${body[id]}")
+						.toD("sql:{{updateCustomer}}")
 						.marshal().json()
 						.to("log:?level=INFO&showBody=true")
 					.otherwise()
 						.log("Exception occured");
 
 		from("direct:delete")
-				.toD("sql:delete from customer where id = ${headers.id}");
+				.toD("sql:{{deleteCustomer}}");
 	}
 }
