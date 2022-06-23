@@ -61,17 +61,16 @@ public class MyRouteBuilder extends RouteBuilder {
 						.to("log:?level=INFO&showBody=true");
 
 		from("direct:update")
-				.choice()
-					.when(simple("${headers.id} != null "))
-						.unmarshal().json()
-						.log("received message id ${body[id]}")
-						.toD("sql:{{updateCustomer}}")
-						.marshal().json()
-						.to("log:?level=INFO&showBody=true")
-					.otherwise()
-						.log("Exception occured");
+				.unmarshal().json()
+				.log("received message id ${body[id]}")
+				.bean(new CustomerMapper(),"updateCustomerDetails")
+				.toD("sql:{{updateCustomer}}")
+				.marshal().json()
+				.to("log:?level=INFO&showBody=true");
 
 		from("direct:delete")
-				.toD("sql:{{deleteCustomer}}");
+				.log("Id received to delete customer details -> ${headers.id}")
+				.toD("sql:{{deleteCustomer}}")
+				.setBody(simple("Status:SUCCESS"));
 	}
 }
