@@ -20,7 +20,7 @@ public class MyRouteBuilder extends RouteBuilder {
 		restConfiguration().host(host).port(port).component("jetty");
 
 		rest(apiPath)
-				.post("/submit")
+				.post("/")
 				.to("direct:submit");
 		rest(apiPath)
 				.get("/{id}")
@@ -28,7 +28,7 @@ public class MyRouteBuilder extends RouteBuilder {
 				.get("/")
 				.to("direct:view");
 		rest(apiPath)
-				.put("/{id}")
+				.put("/")
 				.to("direct:update");
 		rest(apiPath)
 				.delete("/{id}")
@@ -40,6 +40,7 @@ public class MyRouteBuilder extends RouteBuilder {
 				.log("received body id->${body[id]}")
 				.bean(new CustomerMapper(),"putCustomerDetails")
 				.toD("sql:{{insertCustomer}}")
+				.to("direct:cache")
 				.choice()
 					.when(simple("${body[customerId]}!= null"))
 						.setBody(simple("Status:SUCCESS"))
@@ -72,5 +73,13 @@ public class MyRouteBuilder extends RouteBuilder {
 				.log("Id received to delete customer details -> ${headers.id}")
 				.toD("sql:{{deleteCustomer}}")
 				.setBody(simple("Status:SUCCESS"));
+
+		from("direct:cache")
+				.log("received body -> ${body}")
+				//.unmarshal().json()
+				.setHeader("cacheKey",simple("${body[customerId]}"))
+				.setHeader("cacheValue",simple("${body[customerName]}"))
+				.setHeader("cacheOperation",simple("HSET"))
+				.bean(new CacheOperations(),"doCacheOperations");
 	}
 }
