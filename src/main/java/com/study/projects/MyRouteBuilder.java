@@ -67,6 +67,7 @@ public class MyRouteBuilder extends RouteBuilder {
 				.bean(new CustomerMapper(),"updateCustomerDetails")
 				.toD("sql:{{updateCustomer}}")
 				.marshal().json()
+				.setBody(simple("Status:SUCCESS"))
 				.to("log:?level=INFO&showBody=true");
 
 		from("direct:delete")
